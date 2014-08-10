@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"time"
 )
 
 type Params struct {
@@ -12,12 +13,18 @@ type Params struct {
 	Barber_delay   float64
 }
 
-func barber() {
+func barber(customer_ready chan int) {
 	fmt.Printf("I am a Barber.\n")
+	for {
+		customer_id := <-customer_ready
+		fmt.Printf("BARBER: Customer %d served.\n", customer_id)
+	}
 }
 
-func customer() {
-	fmt.Printf("I am a Customer.\n")
+func customer(id int, customer_ready chan int) {
+	fmt.Printf("I am a Customer #%d.\n", id)
+	customer_ready <- id
+
 }
 
 func read_params() *Params {
@@ -33,12 +40,13 @@ func read_params() *Params {
 
 func main() {
 	params := read_params()
-	fmt.Printf("%#v\n", params)
-	fmt.Printf("Hello, Barber.\n")
 
-	go barber()
-	go customer()
+	customer_ready := make(chan int)
 
-	var input string
-	fmt.Scanln(&input)
+	go barber(customer_ready)
+	for id := 0; id < params.Customers; id++ {
+		go customer(id, customer_ready)
+	}
+
+	time.Sleep(250 * time.Millisecond)
 }
