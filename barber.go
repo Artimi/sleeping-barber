@@ -13,12 +13,23 @@ type Params struct {
 	Barber_delay   int
 }
 
-func barber(params Params, seats chan int, customer_served chan int) {
+func serve_customer(customer_id int, delay int, customer_served chan int) {
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+	customer_served <- customer_id
+	fmt.Printf("BARBER: Customer %d served.\n", customer_id)
+}
+
+func barber(delay int, seats chan int, customer_served chan int) {
 	for {
-		customer_id := <-seats
-		time.Sleep(time.Duration(params.Barber_delay) * time.Millisecond)
-		customer_served <- customer_id
-		fmt.Printf("BARBER: Customer %d served.\n", customer_id)
+		select {
+		case customer_id := <-seats:
+			serve_customer(customer_id, delay, customer_served)
+		default:
+			fmt.Printf("BARBER: Sleeping.\n")
+			customer_id := <-seats
+			fmt.Printf("BARBER: Woken up by customer %d.\n", customer_id)
+			serve_customer(customer_id, delay, customer_served)
+		}
 	}
 }
 
@@ -53,7 +64,7 @@ func main() {
 	seats := make(chan int, params.Seats)
 	customer_served := make(chan int)
 
-	go barber(*params, seats, customer_served)
+	go barber(params.Barber_delay, seats, customer_served)
 	for id := 0; id < params.Customers; id++ {
 		go customer(id, seats, customer_served)
 		time.Sleep(time.Duration(params.Customer_delay) * time.Millisecond)
