@@ -6,32 +6,31 @@ import (
 	"time"
 )
 
-type Params struct {
-	Customers             int
-	Seats                 int
-	Customer_delay        int
-	Customer_return_delay int
-	Barber_delay          int
-}
-
 func serve_customer(customer_id int, delay int, customer_served chan int) {
 	time.Sleep(time.Duration(delay) * time.Millisecond)
 	customer_served <- customer_id
 	fmt.Printf("BARBER: Customer %d served.\n", customer_id)
 }
 
-func barber(delay int, seats chan int, customer_served chan int) {
+func barber(delay int, seats chan int, customer_served chan int, going_home chan int, customer_to_serve int) {
+	var customer_id int = -1
+	var number_of_customers_served int = 0
 	for {
 		select {
-		case customer_id := <-seats:
-			serve_customer(customer_id, delay, customer_served)
+		case customer_id = <-seats:
 		default:
 			fmt.Printf("BARBER: Sleeping.\n")
-			customer_id := <-seats
+			customer_id = <-seats
 			fmt.Printf("BARBER: Woken up by customer %d.\n", customer_id)
-			serve_customer(customer_id, delay, customer_served)
+		}
+		serve_customer(customer_id, delay, customer_served)
+		number_of_customers_served++
+		if number_of_customers_served == customer_to_serve {
+			break
 		}
 	}
+	fmt.Printf("BARBER: Closing shop, going home.\n")
+	going_home <- 1
 }
 
 func customer(id int, return_delay int, seats chan int, customer_served chan int) {
@@ -53,6 +52,14 @@ func customer(id int, return_delay int, seats chan int, customer_served chan int
 	}
 }
 
+type Params struct {
+	Customers             int
+	Seats                 int
+	Customer_delay        int
+	Customer_return_delay int
+	Barber_delay          int
+}
+
 func read_params() *Params {
 	var params *Params = new(Params)
 	flag.IntVar(&params.Customers, "customers", 10, "number of customers to come to barber shop")
@@ -70,12 +77,12 @@ func main() {
 
 	seats := make(chan int, params.Seats)
 	customer_served := make(chan int)
+	barber_going_home := make(chan int)
 
-	go barber(params.Barber_delay, seats, customer_served)
+	go barber(params.Barber_delay, seats, customer_served, barber_going_home, params.Customers)
 	for id := 0; id < params.Customers; id++ {
 		go customer(id, params.Customer_return_delay, seats, customer_served)
 		time.Sleep(time.Duration(params.Customer_delay) * time.Millisecond)
 	}
-
-	time.Sleep(500 * time.Millisecond)
+	<-barber_going_home
 }
