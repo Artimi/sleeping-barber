@@ -9,44 +9,48 @@ import (
 type Params struct {
 	Customers      int
 	Seats          int
-	Customer_delay float64
-	Barber_delay   float64
+	Customer_delay int
+	Barber_delay   int
 }
 
-func barber(customer_ready chan int) {
-	fmt.Printf("I am a Barber.\n")
+func barber(params Params, seats chan int) {
 	for {
-		customer_id := <-customer_ready
+		customer_id := <-seats
+		time.Sleep(time.Duration(params.Barber_delay) * time.Millisecond)
 		fmt.Printf("BARBER: Customer %d served.\n", customer_id)
 	}
 }
 
-func customer(id int, customer_ready chan int) {
-	fmt.Printf("I am a Customer #%d.\n", id)
-	customer_ready <- id
-
+func customer(id int, seats chan int) {
+	select {
+	case seats <- id:
+		fmt.Printf("CUSTOMER %d: Leaving barber shop happy.\n", id)
+	default:
+		fmt.Printf("CUSTOMER %d: Leaving barber shop unserviced.\n", id)
+	}
 }
 
 func read_params() *Params {
 	var params *Params = new(Params)
 	flag.IntVar(&params.Customers, "customers", 10, "number of customers to come to barber shop")
 	flag.IntVar(&params.Seats, "seats", 3, "number of seats in barber shop")
-	flag.Float64Var(&params.Customer_delay, "customers_delay", 100, "mean value of time of customers incoming to shop")
-	flag.Float64Var(&params.Barber_delay, "barber_delay", 150, "mean value of time of barbers work on customer")
+	flag.IntVar(&params.Customer_delay, "customers_delay", 5, "mean value of time of customers incoming to shop")
+	flag.IntVar(&params.Barber_delay, "barber_delay", 15, "mean value of time of barbers work on customer")
 
 	flag.Parse()
 	return params
 }
 
 func main() {
-	params := read_params()
+	var params *Params = read_params()
 
-	customer_ready := make(chan int)
+	seats := make(chan int, params.Seats)
 
-	go barber(customer_ready)
+	go barber(*params, seats)
 	for id := 0; id < params.Customers; id++ {
-		go customer(id, customer_ready)
+		go customer(id, seats)
+		time.Sleep(time.Duration(params.Customer_delay) * time.Millisecond)
 	}
 
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 }
