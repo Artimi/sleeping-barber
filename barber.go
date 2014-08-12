@@ -62,11 +62,11 @@ type Params struct {
 
 func read_params() *Params {
 	var params *Params = new(Params)
-	flag.IntVar(&params.Customers, "customers", 10, "number of customers to come to barber shop")
-	flag.IntVar(&params.Seats, "seats", 3, "number of seats in barber shop")
-	flag.IntVar(&params.Customer_delay, "customers_delay", 5, "time between customers incoming to shop")
-	flag.IntVar(&params.Customer_return_delay, "customers_return_delay", 20, "time between customers' retry if the barber shop is full")
-	flag.IntVar(&params.Barber_delay, "barber_delay", 15, "time of barber working on customer")
+	flag.IntVar(&params.Customers, "customers", 10, "Number of customers to come to barber shop")
+	flag.IntVar(&params.Seats, "seats", 3, "Number of seats in barber shop")
+	flag.IntVar(&params.Customer_delay, "customers_delay", 5, "Time between customers incoming to shop [ms]")
+	flag.IntVar(&params.Customer_return_delay, "customers_return_delay", 20, "Time between customers' retry if the barber shop is full [ms]")
+	flag.IntVar(&params.Barber_delay, "barber_delay", 15, "Time of barber working on customer [ms]")
 
 	flag.Parse()
 	return params
